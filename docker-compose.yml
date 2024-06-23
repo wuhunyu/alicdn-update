@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  alicdn-update:
+    image: alicdn-update:0.9.0
+    container_name: alicdn-update
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - /root/.acme.sh/static.wuhunyu.top_ecc:/app/sslPath:ro
+      - /opt/alicdn-update/logs:/var/logs
+    environment:
+      - accessKeyId=
+      - accessKeySecret=
+      - domain=static.wuhunyu.top
+      - sslPath=/app/sslPath
+      - pub=static.wuhunyu.top.cer
+      - pri=static.wuhunyu.top.key
+      - scheduledCron=0 0 1 * * ?
+      - JAVA_OPTS=-Xms256m -Xmx256m
