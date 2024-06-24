@@ -57,7 +57,7 @@
 可通过 `docker logs -f -n 100 alicdn-update` 观察程序的日志输出情况，不出意外的话，可观察到类似于这样的日志信息
 
 ```shell
-2024-06-24 18:23:33.974 [main] INFO  top.wuhunyu.alicdn.AliCdnUpdateApplication - 阿里云cdn更新程序启动中 
+2024-06-24 18:23:33.974 [main] INFO  top.wuhunyu.alicdn.AliCdnUpdateApplication - 阿里云 CDN 更新程序启动中 
 2024-06-24 18:23:34.004 [main] INFO  top.wuhunyu.alicdn.properties.AliCdnProperties - 读取配置信息如下： 
 2024-06-24 18:23:34.005 [main] INFO  top.wuhunyu.alicdn.properties.AliCdnProperties - 阿里云访问key：XXXXXXXXXXXXXXXX 
 2024-06-24 18:23:34.006 [main] INFO  top.wuhunyu.alicdn.properties.AliCdnProperties - 阿里云域名：static.wuhunyu.top 
