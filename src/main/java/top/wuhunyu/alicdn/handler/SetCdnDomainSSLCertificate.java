@@ -2,13 +2,18 @@ package top.wuhunyu.alicdn.handler;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IORuntimeException;
+import com.aliyun.apache.hc.core5.http.HttpStatus;
 import com.aliyun.sdk.service.cdn20180510.models.SetCdnDomainSSLCertificateRequest;
+import com.aliyun.sdk.service.cdn20180510.models.SetCdnDomainSSLCertificateResponse;
+import com.aliyun.sdk.service.cdn20180510.models.SetCdnDomainSSLCertificateResponseBody;
 import lombok.extern.slf4j.Slf4j;
 import top.wuhunyu.alicdn.properties.AliCdnProperties;
 import top.wuhunyu.alicdn.core.MyAliClient;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * 修改阿里云 CDN https 证书
@@ -67,8 +72,27 @@ public class SetCdnDomainSSLCertificate {
                 SetCdnDomainSSLCertificateRequest setCdnDomainSSLCertificateRequest =
                         SetCdnDomainSSLCertificate.buildSetCdnDomainSSLCertificateRequest();
                 // 执行修改
-                MyAliClient.INSTANCE.getAliClient().setCdnDomainSSLCertificate(setCdnDomainSSLCertificateRequest);
-                log.info("修改阿里云 CDN https 证书成功");
+                MyAliClient.INSTANCE.getAliClient()
+                        .setCdnDomainSSLCertificate(setCdnDomainSSLCertificateRequest)
+                        .thenAccept(setCdnDomainSSLCertificateResponse -> {
+                            // 相应状态码
+                            Integer statusCode = setCdnDomainSSLCertificateResponse.getStatusCode();
+                            if (Objects.equals(statusCode, HttpStatus.SC_OK)) {
+                                log.info("<= 修改阿里云 CDN https 证书成功");
+                                return;
+                            }
+                            // 请求id
+                            String requestId = Optional.of(setCdnDomainSSLCertificateResponse)
+                                    .map(SetCdnDomainSSLCertificateResponse::getBody)
+                                    .map(SetCdnDomainSSLCertificateResponseBody::getRequestId)
+                                    .orElse("");
+                            log.warn("<= 修改阿里云 CDN https 证书失败，状态码：{}，请求id：{}",
+                                    statusCode, requestId);
+                        }).exceptionally(e -> {
+                            log.warn("<= 修改阿里云 CDN https 证书失败，异常堆栈信息：", e);
+                            return null;
+                        });
+                log.info("=> 修改阿里云 CDN https 证书请求发起成功");
                 return;
             } catch (Exception e) {
                 log.warn("第 {} 次尝试失败：", i + 1, e);

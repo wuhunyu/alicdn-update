@@ -16,12 +16,25 @@ import top.wuhunyu.alicdn.properties.AliCdnProperties;
 @Slf4j
 public class AliCdnUpdateApplication {
 
-    public static void schedule() {
+    /**
+     * 启动一个定时器，用于周期性执行阿里云 cdn 证书更新任务
+     */
+    private static void schedule() {
         AliCdnProperties instance = AliCdnProperties.getInstance();
-        CronUtil.schedule(instance.getScheduledCron(), (Runnable) SetCdnDomainSSLCertificate::invoke);
+        CronUtil.schedule(instance.getScheduledCron(), (Runnable) () -> {
+            log.info("触发定时器，执行阿里云 cdn 证书更新任务");
+            SetCdnDomainSSLCertificate.invoke();
+        });
+        // 设置支持秒级任务
+        CronUtil.setMatchSecond(Boolean.TRUE);
+        // 启动定时器
+        CronUtil.start(Boolean.TRUE);
     }
 
-    public static void listen() {
+    /**
+     * 启动一个监听器，用于监听证书文件的变化，并触发阿里云 cdn 证书更新任务
+     */
+    private static void listen() {
         ListenFileModify.listen(SetCdnDomainSSLCertificate::invoke);
     }
 
