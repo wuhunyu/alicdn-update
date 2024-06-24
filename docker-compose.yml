@@ -12,10 +12,10 @@ services:
       - /root/.acme.sh/static.wuhunyu.top_ecc:/app/sslPath:ro
       - /opt/alicdn-update/logs:/var/logs
     environment:
+      - TZ=Asia/Shanghai
       - accessKeyId=
       - accessKeySecret=
       - domain=static.wuhunyu.top
-      - sslPath=/app/sslPath
       - pub=static.wuhunyu.top.cer
       - pri=static.wuhunyu.top.key
       - scheduledCron=0 0 1 * * ?
