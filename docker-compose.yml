@@ -4,6 +4,7 @@ services:
   alicdn-update:
     image: alicdn-update:1.0.0
     container_name: alicdn-update
+    restart: always
     build:
       context: .
       dockerfile: Dockerfile
