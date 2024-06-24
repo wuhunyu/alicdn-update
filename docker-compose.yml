@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   alicdn-update:
-    image: alicdn-update:0.9.0
+    image: alicdn-update:1.0.0
     container_name: alicdn-update
     build:
       context: .
