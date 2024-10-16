@@ -12,10 +12,10 @@ VOLUME /var/logs
 # 配置变量
 ENV accessKeyId=""
 ENV accessKeySecret=""
-ENV domain=""
+ENV domains=""
 ENV sslPath=""
-ENV pub=""
-ENV pri=""
+ENV pubes=""
+ENV pries=""
 ENV scheduledCron=""
 ENV fileModifyListenDelay=""
 ENV retryTimeWhenException=""

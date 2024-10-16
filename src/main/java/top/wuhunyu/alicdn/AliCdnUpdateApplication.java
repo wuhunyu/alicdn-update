@@ -23,7 +23,7 @@ public class AliCdnUpdateApplication {
         AliCdnProperties instance = AliCdnProperties.getInstance();
         CronUtil.schedule(instance.getScheduledCron(), (Runnable) () -> {
             log.info("触发定时器，执行阿里云 CDN 证书更新任务");
-            SetCdnDomainSSLCertificate.invoke();
+            SetCdnDomainSSLCertificate.invoke(null);
         });
         // 设置支持秒级任务
         CronUtil.setMatchSecond(Boolean.TRUE);
@@ -46,7 +46,7 @@ public class AliCdnUpdateApplication {
         // 启动证书监听器
         listen();
         // 主动执行一次证书修改
-        SetCdnDomainSSLCertificate.invoke();
+        SetCdnDomainSSLCertificate.invoke(null);
         // 阻塞主线程
         synchronized (AliCdnUpdateApplication.class) {
             AliCdnUpdateApplication.class.wait();

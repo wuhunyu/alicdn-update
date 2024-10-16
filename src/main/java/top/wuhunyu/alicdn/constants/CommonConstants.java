@@ -30,7 +30,7 @@ public final class CommonConstants {
     /**
      * 阿里云域名
      */
-    public static final String DOMAIN = "domain";
+    public static final String DOMAINS = "domains";
 
     /**
      * 保存 ssl 证书的目录
@@ -40,12 +40,12 @@ public final class CommonConstants {
     /**
      * 公钥的名称
      */
-    public static final String PUB = "pub";
+    public static final String PUBES = "pubes";
 
     /**
      * 私钥的名称
      */
-    public static final String PRI = "pri";
+    public static final String PRIES = "pries";
 
     /**
      * 更新的时间表达式

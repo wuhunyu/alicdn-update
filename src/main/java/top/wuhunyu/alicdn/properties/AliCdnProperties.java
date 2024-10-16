@@ -13,6 +13,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 
@@ -38,13 +40,13 @@ public class AliCdnProperties {
 
     private String accessKeySecret;
 
-    private String domain;
+    private List<String> domains;
 
     private String sslPath;
 
-    private String pub;
+    private List<String> pubes;
 
-    private String pri;
+    private List<String> pries;
 
     private String scheduledCron;
 
@@ -71,10 +73,10 @@ public class AliCdnProperties {
 
         String accessKeyId = AliCdnProperties.readDefault(aliCdnFromProperties, ACCESS_KEY_ID);
         String accessKeySecret = AliCdnProperties.readDefault(aliCdnFromProperties, ACCESS_KEY_SECRET);
-        String domain = AliCdnProperties.readDefault(aliCdnFromProperties, DOMAIN);
+        String domains = AliCdnProperties.readDefault(aliCdnFromProperties, DOMAINS);
         String sslPath = AliCdnProperties.readDefault(aliCdnFromProperties, SSL_PATH);
-        String pub = AliCdnProperties.readDefault(aliCdnFromProperties, PUB);
-        String pri = AliCdnProperties.readDefault(aliCdnFromProperties, PRI);
+        String pubes = AliCdnProperties.readDefault(aliCdnFromProperties, PUBES);
+        String pries = AliCdnProperties.readDefault(aliCdnFromProperties, PRIES);
         String scheduledCron = AliCdnProperties.readDefault(aliCdnFromProperties, SCHEDULED_CRON);
         String fileModifyListenDelayStr =
                 AliCdnProperties.readDefault(aliCdnFromProperties, FILE_MODIFY_LISTEN_DELAY);
@@ -83,19 +85,34 @@ public class AliCdnProperties {
 
         Objects.requireNonNull(accessKeyId, "阿里云访问key不能为空");
         Objects.requireNonNull(accessKeySecret, "阿里云访问密钥不能为空");
-        Objects.requireNonNull(domain, "阿里云域名不能为空");
+        Objects.requireNonNull(domains, "阿里云域名不能为空");
         Objects.requireNonNull(sslPath, "保存 ssl 证书的目录不能为空");
-        Objects.requireNonNull(pub, "公钥的名称不能为空");
-        Objects.requireNonNull(pri, "私钥的名称不能为空");
+        Objects.requireNonNull(pubes, "公钥的名称不能为空");
+        Objects.requireNonNull(pries, "私钥的名称不能为空");
 
         // 证书存在性验证
-        String pubPath = sslPath + File.separatorChar + pub;
-        if (!new File(pubPath).isFile()) {
-            throw new IllegalArgumentException("公钥 " + pubPath + "不是一个有效的文件");
+        String[] domainSplit = domains.split(File.pathSeparator);
+        String[] pubSplit = pubes.split(File.pathSeparator);
+        String[] priSplit = pries.split(File.pathSeparator);
+        int n = domainSplit.length;
+        if (pubSplit.length < n) {
+            throw new IllegalArgumentException("公钥的数量与域名的数据不一致");
         }
-        String priPath = sslPath + File.separatorChar + pub;
-        if (!new File(priPath).isFile()) {
-            throw new IllegalArgumentException("私钥 " + priPath + "不是一个有效的文件");
+        if (priSplit.length < n) {
+            throw new IllegalArgumentException("私钥的数量与域名的数据不一致");
+        }
+        for (int i = 0; i < n; i++) {
+            String domain = domainSplit[i];
+            String pub = pubSplit[i];
+            String pri = priSplit[i];
+            String pubPath = sslPath + File.separatorChar + domain + File.separatorChar + pub;
+            if (!new File(pubPath).isFile()) {
+                throw new IllegalArgumentException("公钥 " + pubPath + "不是一个有效的文件");
+            }
+            String priPath = sslPath + File.separatorChar + domain + File.separatorChar + pri;
+            if (!new File(priPath).isFile()) {
+                throw new IllegalArgumentException("私钥 " + priPath + "不是一个有效的文件");
+            }
         }
 
         // cron 表达式验证
@@ -135,10 +152,10 @@ public class AliCdnProperties {
         AliCdnProperties aliCdnProperties = AliCdnProperties.builder()
                 .accessKeyId(accessKeyId)
                 .accessKeySecret(accessKeySecret)
-                .domain(domain)
+                .domains(Arrays.stream(domainSplit).toList())
                 .sslPath(sslPath)
-                .pub(pub)
-                .pri(pri)
+                .pubes(Arrays.stream(pubSplit).toList())
+                .pries(Arrays.stream(priSplit).toList())
                 .scheduledCron(scheduledCron)
                 .fileModifyListenDelay(fileModifyListenDelay)
                 .retryTimeWhenException(retryTimeWhenException)
@@ -177,10 +194,10 @@ public class AliCdnProperties {
     private static void print(AliCdnProperties aliCdnProperties) {
         log.info("读取配置信息如下：");
         log.info("阿里云访问key：{}", aliCdnProperties.getAccessKeyId());
-        log.info("阿里云域名：{}", aliCdnProperties.getDomain());
+        log.info("阿里云域名：{}", aliCdnProperties.getDomains());
         log.info("保存 ssl 证书的目录：{}", aliCdnProperties.getSslPath());
-        log.info("公钥的名称：{}", aliCdnProperties.getPub());
-        log.info("私钥的名称：{}", aliCdnProperties.getPri());
+        log.info("公钥的名称：{}", aliCdnProperties.getPubes());
+        log.info("私钥的名称：{}", aliCdnProperties.getPries());
         log.info("更新的时间表达式：{}", aliCdnProperties.getScheduledCron());
         log.info("文件监听延迟时间：{}", aliCdnProperties.getFileModifyListenDelay());
         log.info("异常时重试的次数：{}", aliCdnProperties.getRetryTimeWhenException());

@@ -7,11 +7,15 @@ import com.aliyun.sdk.service.cdn20180510.models.SetCdnDomainSSLCertificateReque
 import com.aliyun.sdk.service.cdn20180510.models.SetCdnDomainSSLCertificateResponse;
 import com.aliyun.sdk.service.cdn20180510.models.SetCdnDomainSSLCertificateResponseBody;
 import lombok.extern.slf4j.Slf4j;
-import top.wuhunyu.alicdn.properties.AliCdnProperties;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
 import top.wuhunyu.alicdn.core.MyAliClient;
+import top.wuhunyu.alicdn.properties.AliCdnProperties;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -25,78 +29,97 @@ import java.util.Optional;
 @Slf4j
 public class SetCdnDomainSSLCertificate {
 
-    private static SetCdnDomainSSLCertificateRequest buildSetCdnDomainSSLCertificateRequest() {
+    private static List<SetCdnDomainSSLCertificateRequest> buildSetCdnDomainSSLCertificateRequests(String domain) {
         // 获取 cdn 配置属性
         AliCdnProperties aliCdnProperties = AliCdnProperties.getInstance();
 
-        // 读取公私钥
-        String pubPath = aliCdnProperties.getSslPath() + File.separator + aliCdnProperties.getPub();
-        String pubStr = "";
-        try {
-            pubStr = FileUtil.readString(pubPath, StandardCharsets.UTF_8);
-        } catch (IORuntimeException e) {
-            throw new RuntimeException("读取公钥 " + pubPath + " 异常");
+        // 是否存在于需要更新的域名列表
+        List<String> domains = aliCdnProperties.getDomains();
+        List<String> pubes = aliCdnProperties.getPubes();
+        List<String> pries = aliCdnProperties.getPries();
+
+        // 需要更新的 域名，公钥，私钥
+        List<ImmutableTriple<String, String, String>> triples = new ArrayList<>();
+        int n = domains.size();
+        for (int i = 0; i < n; i++) {
+            String curDomain = domains.get(i);
+            String curPub = pubes.get(i);
+            String curPri = pries.get(i);
+            if (StringUtils.isBlank(domain) || Objects.equals(domain, curDomain)) {
+                triples.add(ImmutableTriple.of(curDomain, curPub, curPri));
+            }
         }
 
-        String priPath = aliCdnProperties.getSslPath() + File.separator + aliCdnProperties.getPri();
-        String priStr = "";
-        try {
-            priStr = FileUtil.readString(priPath, StandardCharsets.UTF_8);
-        } catch (IORuntimeException e) {
-            throw new RuntimeException("读取私钥 " + priPath + " 异常");
+        // 请求对象容器
+        List<SetCdnDomainSSLCertificateRequest> ans = new ArrayList<>(triples.size());
+
+        for (ImmutableTriple<String, String, String> triple : triples) {
+            String curDomain = triple.getLeft();
+            String curPub = triple.getMiddle();
+            String curPri = triple.getRight();
+
+            // 读取公私钥
+            String pubPath = aliCdnProperties.getSslPath() + File.separator + curDomain + File.separator + curPub;
+            String pubStr = "";
+            try {
+                pubStr = FileUtil.readString(pubPath, StandardCharsets.UTF_8);
+            } catch (IORuntimeException e) {
+                throw new RuntimeException("读取公钥 " + pubPath + " 异常");
+            }
+
+            String priPath = aliCdnProperties.getSslPath() + File.separator + curDomain + File.separator + curPri;
+            String priStr = "";
+            try {
+                priStr = FileUtil.readString(priPath, StandardCharsets.UTF_8);
+            } catch (IORuntimeException e) {
+                throw new RuntimeException("读取私钥 " + priPath + " 异常");
+            }
+
+            // 构建 cdn 证书修改请求对象
+            ans.add(SetCdnDomainSSLCertificateRequest.builder()
+                    .domainName(curDomain)
+                    .certName(SetCdnDomainSSLCertificate.generateCertName(curDomain))
+                    .certType("upload")
+                    .SSLProtocol("on")
+                    .SSLPub(pubStr)
+                    .SSLPri(priStr)
+                    .build());
         }
 
-        // 构建 cdn 证书修改请求对象
-        return SetCdnDomainSSLCertificateRequest.builder()
-                .domainName(aliCdnProperties.getDomain())
-                .certName(SetCdnDomainSSLCertificate.generateCertName(aliCdnProperties.getDomain()))
-                .certType("upload")
-                .SSLProtocol("on")
-                .SSLPub(pubStr)
-                .SSLPri(priStr)
-                .build();
+        return ans;
     }
 
     private static String generateCertName(String domain) {
         return domain + "-" + System.currentTimeMillis();
     }
 
-    public static void invoke() {
-        // 获取 cdn 配置属性
-        int retryTimeWhenException = AliCdnProperties.getInstance()
-                .getRetryTimeWhenException();
-
-        for (int i = 0; i < retryTimeWhenException; i++) {
-            try {
-                // 构建请求对象
-                SetCdnDomainSSLCertificateRequest setCdnDomainSSLCertificateRequest =
-                        SetCdnDomainSSLCertificate.buildSetCdnDomainSSLCertificateRequest();
-                // 执行修改
-                MyAliClient.INSTANCE.getAliClient()
-                        .setCdnDomainSSLCertificate(setCdnDomainSSLCertificateRequest)
-                        .thenAccept(setCdnDomainSSLCertificateResponse -> {
-                            // 相应状态码
-                            Integer statusCode = setCdnDomainSSLCertificateResponse.getStatusCode();
-                            if (Objects.equals(statusCode, HttpStatus.SC_OK)) {
-                                log.info("<= 修改阿里云 CDN https 证书成功");
-                                return;
-                            }
-                            // 请求id
-                            String requestId = Optional.of(setCdnDomainSSLCertificateResponse)
-                                    .map(SetCdnDomainSSLCertificateResponse::getBody)
-                                    .map(SetCdnDomainSSLCertificateResponseBody::getRequestId)
-                                    .orElse("");
-                            log.warn("<= 修改阿里云 CDN https 证书失败，状态码：{}，请求id：{}",
-                                    statusCode, requestId);
-                        }).exceptionally(e -> {
-                            log.warn("<= 修改阿里云 CDN https 证书失败，异常堆栈信息：", e);
-                            return null;
-                        });
-                log.info("=> 修改阿里云 CDN https 证书请求发起成功");
-                return;
-            } catch (Exception e) {
-                log.warn("第 {} 次尝试失败：", i + 1, e);
-            }
+    public static void invoke(String domain) {
+        // 构建请求对象
+        for (SetCdnDomainSSLCertificateRequest setCdnDomainSSLCertificateRequest :
+                SetCdnDomainSSLCertificate.buildSetCdnDomainSSLCertificateRequests(domain)) {
+            final String curDomain = setCdnDomainSSLCertificateRequest.getDomainName();
+            // 执行修改
+            MyAliClient.INSTANCE.getAliClient()
+                    .setCdnDomainSSLCertificate(setCdnDomainSSLCertificateRequest)
+                    .thenAccept(setCdnDomainSSLCertificateResponse -> {
+                        // 相应状态码
+                        Integer statusCode = setCdnDomainSSLCertificateResponse.getStatusCode();
+                        if (Objects.equals(statusCode, HttpStatus.SC_OK)) {
+                            log.info("<= 修改阿里云 {} CDN https 证书成功", curDomain);
+                            return;
+                        }
+                        // 请求id
+                        String requestId = Optional.of(setCdnDomainSSLCertificateResponse)
+                                .map(SetCdnDomainSSLCertificateResponse::getBody)
+                                .map(SetCdnDomainSSLCertificateResponseBody::getRequestId)
+                                .orElse("");
+                        log.warn("<= 修改阿里云 {} CDN https 证书失败，状态码：{}，请求id：{}",
+                                curDomain, statusCode, requestId);
+                    }).exceptionally(e -> {
+                        log.warn("<= 修改阿里云 {} CDN https 证书失败，异常堆栈信息：", curDomain, e);
+                        return null;
+                    });
+            log.info("=> 修改阿里云 {} CDN https 证书请求发起成功", curDomain);
         }
     }
 
